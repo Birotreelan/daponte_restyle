@@ -94,6 +94,7 @@ export interface PacienteFicha {
 
 export interface TreeEntrada {
   Id: string
+  Paciente_Id: string
   Fecha: string
   Hora: string
   Practica_Codigo: string
@@ -102,6 +103,12 @@ export interface TreeEntrada {
   Profesional_Apellido: string
   Profesional_Nombres: string
   Es_Administrador: boolean
+}
+
+/** Fila cruda de la tabla satélite (tree_<tabla>) de una práctica puntual. */
+export interface PracticaDetalle {
+  codigo: string
+  practica: Record<string, unknown> | null
 }
 
 export interface TreeProtocolo {
@@ -231,6 +238,28 @@ export function usePacienteHistorico(pId: string | null) {
     loading: isLoading,
     error,
   }
+}
+
+/**
+ * Detalle clínico puntual (equivalente a los frmt_*.php) de una entrada de
+ * la Historia Clínica. `habilitado` permite disparar la consulta solo
+ * cuando la fila se expande en la UI (no precargar las 35 posibles).
+ */
+export function usePacientePracticaDetalle(
+  pId: string | null,
+  codigo: string | null,
+  fecha: string | null,
+  hora: string | null,
+  habilitado: boolean,
+) {
+  const key =
+    habilitado && pId && codigo && fecha && hora
+      ? `/api/pacientes/practica-detalle?p_id=${encodeURIComponent(pId)}&codigo=${encodeURIComponent(codigo)}&fecha=${encodeURIComponent(fecha)}&hora=${encodeURIComponent(hora)}`
+      : null
+  const { data, error, isLoading } = useSWR<PracticaDetalle>(key, getFetcher<PracticaDetalle>, {
+    revalidateOnFocus: false,
+  })
+  return { detalle: data ?? null, loading: isLoading, error }
 }
 
 export function usePacienteArchivos(
