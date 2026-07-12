@@ -115,3 +115,19 @@ export function useSubespecialidades() {
   )
   return { subespecialidades: data ?? [], loading: isLoading, error }
 }
+
+export interface Procedencia {
+  id: string
+  nombre: string
+  Id?: string
+  Nombre?: string
+}
+
+export function useProcedencia() {
+  const { data, error, isLoading } = useSWR<Procedencia[]>(
+    '/api/catalogos?tipo=procedencia',
+    fetcher,
+    { revalidateOnFocus: false },
+  )
+  return { procedencias: data ?? [], loading: isLoading, error }
+}
