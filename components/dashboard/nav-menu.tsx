@@ -12,6 +12,7 @@ import { legacyUrl, extraerArchivoDePopup } from '@/lib/legacy-url'
 // pantalla por pantalla.
 const LEGACY_LINK_MAP: Record<string, string> = {
   'turnos.php': '/dashboard',
+  'tvd_home.php': '/dashboard/turnos/vista-detallada',
 }
 
 type ResolvedLink =

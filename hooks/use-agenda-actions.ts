@@ -99,6 +99,12 @@ export function useAgendaActions(
     [run],
   )
 
+  const cancelarAdmision = useCallback(
+    (turnoId: string, pacienteId: string) =>
+      run(() => apiPost('/api/turnos/cancelar-admision', { turno_id: turnoId, paciente_id: pacienteId })),
+    [run],
+  )
+
   const transferir = useCallback(
     (turnoId: string, turnoOldId: string) =>
       run(() => apiPost('/api/turnos/transferir', { turno_id: turnoId, turno_old_id: turnoOldId })),
@@ -172,6 +178,7 @@ export function useAgendaActions(
     admitir,
     cancelar,
     eliminar,
+    cancelarAdmision,
     transferir,
     copiar,
     bloquear,

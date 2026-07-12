@@ -39,6 +39,13 @@ export interface Plan {
   Nombre?: string
 }
 
+export interface Subespecialidad {
+  id: string
+  nombre: string
+  Id?: string
+  Nombre?: string
+}
+
 // Normaliza el ítem sin importar si el backend usa Id/Nombre o id/nombre
 function normalize(item: Record<string, string>): { id: string; nombre: string } {
   return {
@@ -98,4 +105,13 @@ export function usePlanes(deudorId: string | null) {
     revalidateOnFocus: false,
   })
   return { planes: data ?? [], loading: isLoading, error }
+}
+
+export function useSubespecialidades() {
+  const { data, error, isLoading } = useSWR<Subespecialidad[]>(
+    '/api/catalogos?tipo=subespecialidades',
+    fetcher,
+    { revalidateOnFocus: false },
+  )
+  return { subespecialidades: data ?? [], loading: isLoading, error }
 }
