@@ -1,18 +1,8 @@
 'use client'
 
-import { useState } from 'react'
 import Link from 'next/link'
-import { useMenu, useAccesosRapidos } from '@/hooks/use-menu'
+import { useMenu } from '@/hooks/use-menu'
 import { legacyUrl, extraerArchivoDePopup } from '@/lib/legacy-url'
-
-interface NavMenuProps {
-  /**
-   * Id de tls_proceso de la seccion activa (equivalente a $Proceso_Padre
-   * en el legacy) -- decide que fila de iconos de acceso rapido se
-   * muestra debajo del menu. Ej.: '7433-001' = Turnos.
-   */
-  activeProcesoId?: string | null
-}
 
 // Los links que trae la base son paginas .php del sistema legacy
 // (turnos.php, pacientes.php, javascript:popMe(...), etc.). Lo que ya
@@ -81,35 +71,8 @@ function MenuLink({
   )
 }
 
-function iniciales(nombre: string) {
-  return nombre
-    .split(' ')
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase() ?? '')
-    .join('')
-}
-
-/** Icono del legacy con fallback a iniciales si la imagen no carga. */
-function AccesoIcono({ nombre, imagen }: { nombre: string; imagen: string }) {
-  const [error, setError] = useState(false)
-  if (!imagen || error) {
-    return <span className="text-[11px] font-semibold text-[#5b6b7a]">{iniciales(nombre)}</span>
-  }
-  return (
-    <img
-      src={legacyUrl(imagen)}
-      alt={nombre}
-      title={nombre}
-      width={32}
-      height={32}
-      onError={() => setError(true)}
-    />
-  )
-}
-
-export default function NavMenu({ activeProcesoId = null }: NavMenuProps) {
+export default function NavMenu() {
   const { menu, ayuda, loading } = useMenu()
-  const { accesosRapidos } = useAccesosRapidos(activeProcesoId)
 
   const items = ayuda ? [...menu, ayuda] : menu
 
@@ -149,22 +112,6 @@ export default function NavMenu({ activeProcesoId = null }: NavMenuProps) {
             ))}
         </ul>
       </nav>
-
-      {/* Fila de accesos rapidos (iconos) de la seccion activa */}
-      {accesosRapidos.length > 0 && (
-        <div className="flex h-[46px] w-full items-center bg-[#eaeaea]" aria-label="Accesos rápidos">
-          {accesosRapidos.map((acceso) => (
-            <MenuLink
-              key={acceso.id}
-              href={acceso.link}
-              className="flex h-[46px] w-12 items-center justify-center border-r border-[#d0d0d0] hover:bg-[#dcdcdc]"
-              disabledClassName="flex h-[46px] w-12 cursor-not-allowed items-center justify-center border-r border-[#d0d0d0] opacity-40"
-            >
-              <AccesoIcono nombre={acceso.nombre} imagen={acceso.imagen} />
-            </MenuLink>
-          ))}
-        </div>
-      )}
     </div>
   )
 }
