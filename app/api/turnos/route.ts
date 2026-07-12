@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { phpFetch } from '@/lib/php-fetch'
+import { phpFetch, getSessionToken } from '@/lib/php-fetch'
 
 export interface Turno {
   Id: string
@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
 
   const path = `/turnos_listar.php?profesional_id=${encodeURIComponent(profesional_id)}&sede_id=${encodeURIComponent(sede_id)}&fecha=${encodeURIComponent(fecha)}`
 
-  const { status, body } = await phpFetch<Turno[]>(path)
-
+  const token = await getSessionToken()
+  const { status, body } = await phpFetch<Turno[]>(path, { token })
   return NextResponse.json(body, { status })
 }
