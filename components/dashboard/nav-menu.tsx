@@ -1,7 +1,9 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import { useMenu, useAccesosRapidos } from '@/hooks/use-menu'
+import { legacyUrl, extraerArchivoDePopup } from '@/lib/legacy-url'
 
 interface NavMenuProps {
   /**
@@ -13,17 +15,32 @@ interface NavMenuProps {
 }
 
 // Los links que trae la base son paginas .php del sistema legacy
-// (turnos.php, pacientes.php, javascript:popMe(...), etc.), no rutas
-// de este frontend. Solo lo que ya esta migrado a Next.js entra aca;
-// todo lo demas se muestra pero queda deshabilitado (en vez de romper
-// con un 404) hasta que se vaya migrando pantalla por pantalla.
+// (turnos.php, pacientes.php, javascript:popMe(...), etc.). Lo que ya
+// esta migrado a Next.js navega internamente (misma pestaña); todo lo
+// demas abre la pantalla real en el sistema legacy en produccion
+// (pestaña nueva), para no dejar nada sin acceso mientras se migra
+// pantalla por pantalla.
 const LEGACY_LINK_MAP: Record<string, string> = {
   'turnos.php': '/dashboard',
 }
 
-function resolveLink(legacyLink: string): string | null {
-  if (!legacyLink || legacyLink.startsWith('javascript:')) return null
-  return LEGACY_LINK_MAP[legacyLink] ?? null
+type ResolvedLink =
+  | { kind: 'interno'; href: string }
+  | { kind: 'legacy'; href: string }
+  | { kind: 'sin_destino' }
+
+function resolveLink(legacyLink: string): ResolvedLink {
+  const migrado = LEGACY_LINK_MAP[legacyLink]
+  if (migrado) return { kind: 'interno', href: migrado }
+
+  if (legacyLink.startsWith('javascript:')) {
+    const archivo = extraerArchivoDePopup(legacyLink)
+    if (!archivo) return { kind: 'sin_destino' }
+    return { kind: 'legacy', href: legacyUrl(archivo) }
+  }
+
+  if (!legacyLink) return { kind: 'sin_destino' }
+  return { kind: 'legacy', href: legacyUrl(legacyLink) }
 }
 
 function MenuLink({
@@ -38,17 +55,55 @@ function MenuLink({
   children: React.ReactNode
 }) {
   const resolved = resolveLink(href)
-  if (!resolved) {
+
+  if (resolved.kind === 'sin_destino') {
     return (
-      <span className={disabledClassName} title="Todavía no migrado a la nueva plataforma">
+      <span className={disabledClassName} title="Sin destino configurado">
         {children}
       </span>
     )
   }
+
+  if (resolved.kind === 'interno') {
+    return (
+      <Link href={resolved.href} className={className}>
+        {children}
+      </Link>
+    )
+  }
+
+  // kind === 'legacy': pantalla todavia no migrada, se abre en el
+  // sistema legacy en una pestaña nueva.
   return (
-    <Link href={resolved} className={className}>
+    <a href={resolved.href} target="_blank" rel="noopener noreferrer" className={className}>
       {children}
-    </Link>
+    </a>
+  )
+}
+
+function iniciales(nombre: string) {
+  return nombre
+    .split(' ')
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? '')
+    .join('')
+}
+
+/** Icono del legacy con fallback a iniciales si la imagen no carga. */
+function AccesoIcono({ nombre, imagen }: { nombre: string; imagen: string }) {
+  const [error, setError] = useState(false)
+  if (!imagen || error) {
+    return <span className="text-[11px] font-semibold text-[#5b6b7a]">{iniciales(nombre)}</span>
+  }
+  return (
+    <img
+      src={legacyUrl(imagen)}
+      alt={nombre}
+      title={nombre}
+      width={32}
+      height={32}
+      onError={() => setError(true)}
+    />
   )
 }
 
@@ -102,14 +157,10 @@ export default function NavMenu({ activeProcesoId = null }: NavMenuProps) {
             <MenuLink
               key={acceso.id}
               href={acceso.link}
-              className="flex h-[46px] w-12 items-center justify-center border-r border-[#d0d0d0] text-[11px] font-semibold text-[#5b6b7a] hover:bg-[#dcdcdc]"
-              disabledClassName="flex h-[46px] w-12 cursor-not-allowed items-center justify-center border-r border-[#d0d0d0] text-[11px] font-semibold text-[#c2c2c2]"
+              className="flex h-[46px] w-12 items-center justify-center border-r border-[#d0d0d0] hover:bg-[#dcdcdc]"
+              disabledClassName="flex h-[46px] w-12 cursor-not-allowed items-center justify-center border-r border-[#d0d0d0] opacity-40"
             >
-              {acceso.nombre
-                .split(' ')
-                .slice(0, 2)
-                .map((w) => w[0]?.toUpperCase() ?? '')
-                .join('')}
+              <AccesoIcono nombre={acceso.nombre} imagen={acceso.imagen} />
             </MenuLink>
           ))}
         </div>

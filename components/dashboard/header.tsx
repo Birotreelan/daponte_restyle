@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useHeaderInfo, useAlertaPolling } from '@/hooks/use-header'
+import { legacyUrl } from '@/lib/legacy-url'
 
 const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
 const MESES = [
@@ -96,8 +97,7 @@ export default function DashboardHeader() {
       {/* Logo de la sede */}
       <div className="flex flex-1 items-center justify-center">
         {headerInfo?.sede_logo && (
-          // Logo servido desde el backend PHP (misma ruta relativa que el original)
-          <img src={headerInfo.sede_logo} alt={usuario?.sede_nombre ?? 'Sede'} className="max-h-10" />
+          <img src={legacyUrl(headerInfo.sede_logo)} alt={usuario?.sede_nombre ?? 'Sede'} className="max-h-10" />
         )}
       </div>
 
@@ -144,7 +144,7 @@ export default function DashboardHeader() {
 
         <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-white/10 text-sm font-semibold text-white">
           {usuario?.foto ? (
-            <img src={usuario.foto} alt={iniciales} className="h-full w-full object-cover" />
+            <img src={legacyUrl(usuario.foto)} alt={iniciales} className="h-full w-full object-cover" />
           ) : (
             iniciales
           )}
