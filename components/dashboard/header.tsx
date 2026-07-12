@@ -1,64 +1,154 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useHeaderInfo, useAlertaPolling } from '@/hooks/use-header'
 
-interface HeaderProps {
-  usuario: string
+const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
+const MESES = [
+  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+]
+
+function fechaLegible(d: Date) {
+  return `${DIAS[d.getDay()]}, ${d.getDate()} de ${MESES[d.getMonth()]} de ${d.getFullYear()}`
 }
 
-export default function DashboardHeader({ usuario }: HeaderProps) {
-  const router = useRouter()
-  const [loading, setLoading] = useState(false)
+interface AlertaBadgeProps {
+  label: string
+  cantidadInicial: number | null
+  tipo: 'bot_ap' | 'bot_to' | 'bot_a'
+}
 
-  async function handleLogout() {
-    setLoading(true)
-    try {
-      await fetch('/api/auth/logout', { method: 'POST' })
-    } finally {
-      router.push('/login')
-      router.refresh()
-    }
-  }
+// Nota: en el legacy cada badge es un link (pacientes_alertas.php,
+// pacientes_turnos_online.php, treelan_autogestion_pacientes.php).
+// Esas pantallas todavia no existen en el frontend nuevo, asi que por
+// ahora el badge solo muestra el contador (sin navegar a ningun lado)
+// hasta que se migren.
+function AlertaBadge({ label, cantidadInicial, tipo }: AlertaBadgeProps) {
+  const habilitado = cantidadInicial !== null
+  const polled = useAlertaPolling(tipo, habilitado)
+  if (!habilitado) return null
 
-  // Iniciales para el avatar
-  const initials = usuario
-    .split(' ')
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase() ?? '')
-    .join('')
+  const cantidad = polled?.cantidad ?? cantidadInicial
+  const activa = polled?.alerta ?? cantidad > 0
 
   return (
-    <header className="flex h-14 items-center justify-between border-b border-border bg-card px-5">
-      {/* Título de la sección activa */}
-      <h1 className="text-sm font-semibold text-foreground">Agenda</h1>
+    <div className="flex items-center gap-1.5" title={label}>
+      <span className="text-[12px]" style={{ color: '#d8deea', textShadow: '1px 1px 1px #000' }}>
+        {label}
+      </span>
+      <span
+        className="flex h-[13px] min-w-[18px] items-center justify-center rounded-[2px] px-1 text-[12px] font-medium"
+        style={{
+          color: '#d8deea',
+          textShadow: '1px 1px 1px #000',
+          backgroundColor: activa ? '#FA3E3E' : 'rgba(255,255,255,0.08)',
+          boxShadow: '0.5px 0.5px 0.5px 0.5px rgba(0,0,0,0.75)',
+        }}
+      >
+        {cantidad}
+      </span>
+    </div>
+  )
+}
 
-      {/* Info de usuario */}
-      <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2">
-          <div
-            className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-[11px] font-semibold text-primary-foreground"
-            aria-hidden="true"
-          >
-            {initials}
+export default function DashboardHeader() {
+  const router = useRouter()
+  const { headerInfo, loading } = useHeaderInfo()
+  const [fecha, setFecha] = useState('')
+  const [menuAbierto, setMenuAbierto] = useState(false)
+
+  useEffect(() => {
+    setFecha(fechaLegible(new Date()))
+  }, [])
+
+  async function handleLogout() {
+    await fetch('/api/auth/logout', { method: 'POST' })
+    router.push('/login')
+    router.refresh()
+  }
+
+  const usuario = headerInfo?.usuario
+  const iniciales = usuario
+    ? `${usuario.apellido?.[0] ?? ''}${usuario.nombres?.[0] ?? ''}`.toUpperCase()
+    : ''
+
+  return (
+    <header
+      className="flex h-[75px] items-center px-4"
+      style={{ background: 'linear-gradient(90deg, #0b2a4a 0%, #163f66 100%)' }}
+    >
+      {/* Fecha + alertas */}
+      <div className="flex flex-1 flex-col gap-1.5">
+        <span className="text-[12px]" style={{ color: '#6c8eb4' }}>
+          {fecha}
+        </span>
+        {!loading && headerInfo && (
+          <div className="flex items-center gap-4">
+            <AlertaBadge label="Visitas" tipo="bot_ap" cantidadInicial={headerInfo.alertas.visitas} />
+            <AlertaBadge label="Online" tipo="bot_to" cantidadInicial={headerInfo.alertas.online} />
+            <AlertaBadge label="Autogestión" tipo="bot_a" cantidadInicial={headerInfo.alertas.autogestion} />
           </div>
-          <span className="text-sm text-foreground">{usuario}</span>
+        )}
+      </div>
+
+      {/* Logo de la sede */}
+      <div className="flex flex-1 items-center justify-center">
+        {headerInfo?.sede_logo && (
+          // Logo servido desde el backend PHP (misma ruta relativa que el original)
+          <img src={headerInfo.sede_logo} alt={usuario?.sede_nombre ?? 'Sede'} className="max-h-10" />
+        )}
+      </div>
+
+      {/* Usuario + sesión */}
+      <div className="flex flex-1 items-center justify-end gap-3">
+        <div className="relative">
+          <button
+            onClick={() => setMenuAbierto((v) => !v)}
+            onBlur={() => setTimeout(() => setMenuAbierto(false), 150)}
+            className="flex h-4 w-3.5 items-center justify-center text-white/70 hover:text-white"
+            aria-label="Menú de sesión"
+          >
+            ▾
+          </button>
+          {menuAbierto && (
+            <ul
+              className="absolute right-0 top-6 z-50 w-40 overflow-hidden rounded-sm text-[12px] shadow-lg"
+              style={{ background: 'linear-gradient(180deg, #013E7D, #005AA2)' }}
+            >
+              <li>
+                <button
+                  className="block w-full px-3 py-2 text-left text-white hover:bg-black/20"
+                  onClick={() => {
+                    /* TODO: modal de edicion de perfil (fase visual siguiente) */
+                  }}
+                >
+                  Editar Perfil
+                </button>
+              </li>
+              <li>
+                <button onClick={handleLogout} className="block w-full px-3 py-2 text-left text-white hover:bg-black/20">
+                  Cerrar Sesión
+                </button>
+              </li>
+            </ul>
+          )}
         </div>
 
-        <div className="h-4 w-px bg-border" aria-hidden="true" />
+        <div className="h-9 w-px bg-white/10" aria-hidden="true" />
 
-        <button
-          onClick={handleLogout}
-          disabled={loading}
-          className="flex items-center gap-1.5 rounded px-2 py-1 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground disabled:opacity-50"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden="true">
-            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-            <polyline points="16 17 21 12 16 7" />
-            <line x1="21" x2="9" y1="12" y2="12" />
-          </svg>
-          {loading ? 'Saliendo...' : 'Cerrar sesión'}
-        </button>
+        <span className="text-[12px]" style={{ color: '#d8deea' }}>
+          {usuario ? `${usuario.apellido}, ${usuario.nombres} de ${usuario.sede_nombre}` : ''}
+        </span>
+
+        <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-white/10 text-sm font-semibold text-white">
+          {usuario?.foto ? (
+            <img src={usuario.foto} alt={iniciales} className="h-full w-full object-cover" />
+          ) : (
+            iniciales
+          )}
+        </div>
       </div>
     </header>
   )
