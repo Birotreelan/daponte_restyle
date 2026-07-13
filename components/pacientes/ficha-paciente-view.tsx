@@ -7,6 +7,7 @@ import TreeListaGenerica from './tree-lista-generica'
 import TabProtocolos from './tab-protocolos'
 import TabHistorico from './tab-historico'
 import PanelArchivos from './panel-archivos'
+import MenuAccionesHc from './menu-acciones-hc'
 
 type TabKey = 'hc' | 'ficha' | 'drv' | 'dia' | 'protocolos' | 'cir' | 'historico'
 
@@ -44,6 +45,7 @@ const dd = 'text-sm text-foreground'
 export default function FichaPacienteView({ pId }: { pId: string }) {
   const { ficha, loading, error } = usePacienteFicha(pId)
   const [tab, setTab] = useState<TabKey>('hc')
+  const [hcRefreshKey, setHcRefreshKey] = useState(0)
 
   if (loading) {
     return <p className="py-10 text-center text-sm text-muted-foreground">Cargando ficha...</p>
@@ -79,7 +81,15 @@ export default function FichaPacienteView({ pId }: { pId: string }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_320px]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[190px_1fr_320px]">
+        {/* Columna izquierda: menu de acciones de carga */}
+        <MenuAccionesHc
+          pId={pId}
+          hc={hc}
+          pacienteNombre={`${paciente.Apellido}, ${paciente.Nombres}`}
+          onConsultaGuardada={() => setHcRefreshKey((k) => k + 1)}
+        />
+
         {/* Columna principal: tabs */}
         <div className="flex flex-col gap-3">
           <div className="flex flex-wrap gap-1 rounded-lg border border-border bg-card p-1 shadow-sm">
@@ -150,7 +160,7 @@ export default function FichaPacienteView({ pId }: { pId: string }) {
                 )}
 
                 <div className="border-t border-border pt-3">
-                  <TreeListaGenerica hc={hc} filtro="hc" emptyText="No hay entradas en la historia clínica." />
+                  <TreeListaGenerica key={hcRefreshKey} hc={hc} filtro="hc" emptyText="No hay entradas en la historia clínica." />
                 </div>
               </div>
             )}
@@ -175,7 +185,7 @@ export default function FichaPacienteView({ pId }: { pId: string }) {
             )}
 
             {tab === 'drv' && <TreeListaGenerica hc={hc} filtro="drv" emptyText="No hay derivaciones cargadas." />}
-            {tab === 'dia' && <TreeListaGenerica hc={hc} filtro="dia" emptyText="No hay diagnósticos cargados." />}
+            {tab === 'dia' && <TreeListaGenerica key={hcRefreshKey} hc={hc} filtro="dia" emptyText="No hay diagnósticos cargados." />}
             {tab === 'protocolos' && <TabProtocolos pId={pId} />}
             {tab === 'cir' && <TreeListaGenerica hc={hc} filtro="cir" emptyText="No hay cirugías cargadas." />}
             {tab === 'historico' && <TabHistorico pId={pId} />}

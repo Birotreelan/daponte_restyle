@@ -9,6 +9,7 @@ export interface HeaderUsuario {
   sede_id: string
   sede_nombre: string
   foto: string
+  profesional_id: string
 }
 
 export interface HeaderInfo {

@@ -131,3 +131,36 @@ export function useProcedencia() {
   )
   return { procedencias: data ?? [], loading: isLoading, error }
 }
+
+export interface Ayudante {
+  Profesional_Id: string
+  Apellido: string
+  Nombres: string
+}
+
+async function fetcherCrudo<T>(url: string): Promise<T[]> {
+  const res = await fetch(url)
+  const json = await res.json()
+  if (!json.success) throw new Error(json.message ?? 'Error')
+  return Array.isArray(json.data) ? json.data : []
+}
+
+/** Valores de los combos de Agudeza Visual (AV) / Adicion (J) de Refraccion. */
+export function useValorRefraccion(subTipo: 'AV' | 'J') {
+  const { data, error, isLoading } = useSWR<{ Valor: string }[]>(
+    `/api/catalogos?tipo=valor_refraccion&sub_tipo=${subTipo}`,
+    fetcherCrudo,
+    { revalidateOnFocus: false },
+  )
+  return { valores: (data ?? []).map((v) => v.Valor), loading: isLoading, error }
+}
+
+/** Ayudantes asignados al usuario logueado (combo "Ayudante" de Nueva Consulta). */
+export function useAyudantes() {
+  const { data, error, isLoading } = useSWR<Ayudante[]>(
+    '/api/catalogos?tipo=ayudantes',
+    fetcherCrudo,
+    { revalidateOnFocus: false },
+  )
+  return { ayudantes: data ?? [], loading: isLoading, error }
+}
